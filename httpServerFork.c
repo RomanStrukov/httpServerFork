@@ -194,7 +194,29 @@ int main() {
 						
 		}
 	}
-	
+	else 
+	{
+		//waitin' till all of the child procs finish
+	   do {
+			stillWaiting = 0;
+			for (int i = 0; i < numberOfChildren; ++i) 
+			{
+			   if (childPids[i] > 0) 
+			   {
+				  if (waitpid(childPids[i], NULL, WNOHANG) != 0)
+					{				 
+					 childPids[i] = 0;
+					}
+				  else 
+				    {				 
+					   stillWaiting = 1;
+				    }
+			   }		  
+			   //sleep(0);
+			}
+		} while (stillWaiting);
+		free(chPids);
+	}
 	close(cd);
 	return 0;
 }
