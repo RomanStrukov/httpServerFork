@@ -85,6 +85,7 @@ int main() {
 	const int backlog = 10;
 	struct sockaddr_in saddr;
 	struct sockaddr_in caddr;
+	char buf[1024];
 	char *line = NULL;
 	size_t len = 0;
 	char *filepath = NULL;
@@ -176,20 +177,25 @@ int main() {
 					i++;
 				}
 				if (content_type != 0) 
+			{
+				fseek(file, 0L, SEEK_END);
+				filesize = ftell(file);
+				fseek(file, 0L, SEEK_SET);
+				headers(cd, filesize, 200, content_type); 
+
+				size_t nbytes = 0;
+
+				while ((nbytes = fread(buf, 1, 1024, file)) > 0) 
 				{
-					fseek(file, 0L, SEEK_END);
-					filesize = ftell(file);
-					fseek(file, 0L, SEEK_SET);
-					headers(cd, filesize, 200, content_type);
-					while (getline(&line, &len, file) != -1) 
+					res = send(cd, buf, nbytes, 0);
+					if (res == -1) 
 					{
-						res = send(cd, line, len, 0);
-						if (res == -1) 
-						{
-							printf("send error \n");
-						}
+						printf("send error \n");
 					}
 				}
+
+				free(content_type);
+			}
 			}		
 						
 		}
