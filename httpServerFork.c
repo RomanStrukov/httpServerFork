@@ -106,8 +106,10 @@ int main(int argc, char* argv[])
 					Respond(clients[slot]);
 					exit(0);
 				}
+				printf("close(clients[slot])\n");
 				close(clients[slot]);				
 			}			
+			   printf("Slot + 1\n");
 			   slot = slot + 1;
 			   if(slot >= conMax)
 			    {
@@ -119,6 +121,8 @@ int main(int argc, char* argv[])
 			//while (clients[slot] != -1)
 				//slot = (slot+1) % conMax;
 		}
+	printf("TestFinish\n");
+	close(my_socket);
 	return 0;				
 }
 
