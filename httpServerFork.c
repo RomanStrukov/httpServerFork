@@ -5,7 +5,7 @@
 #include <string.h>
 
 int my_socket;
-void Start();
+void StartServer();
 void Respond(int);
 
 struct {
@@ -27,7 +27,8 @@ struct {
 	{0, 0}	
 };
 
-void Headers(int client, int size, int httpcode, char* content_type) {
+void Headers(int client, int size, int httpcode, char* content_type) 
+{
 	char buf[1024];
 	char strsize[20];
 	sprintf(strsize, "%d", size);
@@ -51,7 +52,7 @@ void Headers(int client, int size, int httpcode, char* content_type) {
 	send(client, buf, strlen(buf), 0);
 	strcpy(buf, "simple-server");
 	send(client, buf, strlen(buf), 0);
-	if(content_type != null)
+	if(content_type != NULL)
 	{
 	  sprintf(buf, "Content-Type:%s\r\n", content_type);
 	  send(client, buf, strlen(buf), 0);
@@ -61,7 +62,8 @@ void Headers(int client, int size, int httpcode, char* content_type) {
 }
 
 
-void ParseFileName(char *line, char **filepath, size_t *len) {
+void ParseFileName(char *line, char **filepath, size_t *len) 
+{
 	char *start = NULL;
 	while ((*line) != '/') line++;
 	start = line + 1;
@@ -78,9 +80,9 @@ char* GetExtension(char* fileName)
   return strrchr(fileName,'.');
 }
 
-int Main() 
+int main(int argc, char* argv[]) 
 {
-    int conMax = strtonum(argv[1]);
+    int conMax = atoi(argv[1]);
 	int clients[conMax];	
 	struct sockaddr_in caddr;
 	socklen_t size_caddr;
@@ -93,26 +95,26 @@ int Main()
 		while (1) 
 		{
 			clients[slot] = accept(my_socket, (struct sockaddr *)&caddr, &size_caddr);
-			if (clients[slot]<0)
+			if (clients[slot] < 0)
 				error ("accept error");
 			else
 			{
-				if ( fork()==0 )
+				if ( fork() == 0 )
 				{
-					printf("client is in %d descriptor. Client's address is %d \n", cd, caddr.sin_addr.s_addr);
-					respond(clients[slot]);
+					printf("client is in %d descriptor. Client's address is %d \n", clients[slot], caddr.sin_addr.s_addr);
+					Respond(clients[slot]);
 					exit(0);
 				}
 			}
-			while (clients[slot]!=-1) 
-				slot = (slot+1)%conMax;
+			while (clients[slot] != -1) 
+				slot = (slot+1) % conMax;
 		}
-	return 0;						
-						
+	return 0;				
 }
 
 void StartServer()
 {	
+	printf("Starting server...");
 	int res = 0;
 	struct sockaddr_in saddr;
 	const int backlog = 10;
@@ -139,6 +141,7 @@ void StartServer()
 
 void Respond(int cd)
 {
+	printf("Responding...");
 	int filesize = 0;
 	int res = 0;	
 	char buf[1024];
@@ -182,7 +185,7 @@ void Respond(int cd)
 	if (file == NULL) 
 	{
 		printf("404 File Not Found \n");
-		Headers(cd, 0, 404);
+		Headers(cd, 0, 404, NULL);
 	}
 	else 
 	{
