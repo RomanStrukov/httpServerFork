@@ -5,6 +5,7 @@
 #include <string.h>
 
 int my_socket;
+
 void StartServer();
 void Respond(int);
 
@@ -83,7 +84,7 @@ char* GetExtension(char* fileName)
 int main(int argc, char* argv[]) 
 {
     int conMax = atoi(argv[1]);
-	int clients[conMax];	
+	int clients[conMax];
 	struct sockaddr_in caddr;
 	socklen_t size_caddr;
 	
@@ -105,9 +106,18 @@ int main(int argc, char* argv[])
 					Respond(clients[slot]);
 					exit(0);
 				}
-			}
-			while (clients[slot] != -1) 
-				slot = (slot+1) % conMax;
+				close(clients[slot]);				
+			}			
+			   slot = slot + 1;
+			   if(slot >= conMax)
+			    {
+				  printf("Too many clients! Socket's going to close.\n");
+				  close(my_socket);
+				  exit(0); 
+				}
+			
+			//while (clients[slot] != -1)
+				//slot = (slot+1) % conMax;
 		}
 	return 0;				
 }
@@ -222,5 +232,5 @@ void Respond(int cd)
 			}
 			free(content_type);
 		}
-	}	
+	}		
 }
