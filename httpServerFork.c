@@ -4,6 +4,10 @@
 #include <netinet/in.h>
 #include <string.h>
 
+int my_socket;
+void Start();
+void Respond(int);
+
 struct {
 	char *ext;
 	char *conttype;
@@ -77,20 +81,18 @@ char* GetExtension(char* fileName)
 int Main() 
 {
     int conMax = strtonum(argv[1]);
-	int clients[conMax];
-	int my_socket = 0;
+	int clients[conMax];	
 	struct sockaddr_in caddr;
 	socklen_t size_caddr;
 	
 	int i;
 	for(i = 0; i < conMax; i++)
 		clients[i] = -1;	
-	StartServer(my_socket);	
+	StartServer();	
 	int slot = 0;
 		while (1) 
 		{
 			clients[slot] = accept(my_socket, (struct sockaddr *)&caddr, &size_caddr);
-
 			if (clients[slot]<0)
 				error ("accept error");
 			else
@@ -98,25 +100,26 @@ int Main()
 				if ( fork()==0 )
 				{
 					printf("client is in %d descriptor. Client's address is %d \n", cd, caddr.sin_addr.s_addr);
-					respond(slot);
+					respond(clients[slot]);
 					exit(0);
 				}
 			}
-
-			while (clients[slot]!=-1) slot = (slot+1)%conMax;
+			while (clients[slot]!=-1) 
+				slot = (slot+1)%conMax;
 		}
-		return 0;
+	return 0;						
 						
-						
-		}
+}
 
-void StartServer(int my_socket)
+void StartServer()
 {	
 	int res = 0;
 	struct sockaddr_in saddr;
+	const int backlog = 10;
 	
 	my_socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (my_socket == -1) {
+	if (my_socket == -1) 
+	{
 		printf("listener create error \n");
 	}
 	saddr.sin_family = AF_INET;
@@ -134,17 +137,18 @@ void StartServer(int my_socket)
 	}
 }
 
-void Respond()
+void Respond(int cd)
 {
-	int filesize = 0;	
-	const int backlog = 10;		
+	int filesize = 0;
+	int res = 0;	
 	char buf[1024];
+	char *fileExt = NULL;
+	char *content_type = NULL;
 	char *line = NULL;
 	size_t len = 0;
 	char *filepath = NULL;
 	size_t filepath_len = 0;
-	int empty_str_count = 0;
-	socklen_t size_saddr;	
+	int empty_str_count = 0;		
 	FILE *fd;
 	FILE *file;	
 				
@@ -182,8 +186,8 @@ void Respond()
 	}
 	else 
 	{
-		char *fileExt = GetExtension(filepath);
-		char *content_type = 0;
+		fileExt = GetExtension(filepath);
+		content_type = 0;
 		int i = 0;
 		while (extensions[i].ext != 0) 
 		{
