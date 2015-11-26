@@ -74,122 +74,44 @@ char* GetExtension(char* fileName)
   return strrchr(fileName,'.');
 }
 
-int Main() {
+int Main() 
+{
     int conMax = strtonum(argv[1]);
 	int clients[conMax];
-	
+	int my_socket = 0;
 	struct sockaddr_in caddr;
 	socklen_t size_caddr;
 	
 	int i;
 	for(i = 0; i < conMax; i++)
-	clients[i] = -1;
-	
-	StartServer();
-	
-	
-		
-	int filesize = 0;	
-	const int backlog = 10;
-		
-	char buf[1024];
-	char *line = NULL;
-	size_t len = 0;
-	char *filepath = NULL;
-	size_t filepath_len = 0;
-	int empty_str_count = 0;
-	socklen_t size_saddr;
-	
-	FILE *fd;
-	FILE *file;
+		clients[i] = -1;	
+	StartServer(my_socket);	
+	int slot = 0;
 		while (1) 
-		{		
-			cd = accept(my_socket, (struct sockaddr *)&caddr, &size_caddr);
-			if (cd == -1) 
-			{
-				printf("accept error \n");
-				continue;
-			}		
-				printf("client is in %d descriptor. Client's address is %d \n", cd, caddr.sin_addr.s_addr);
-				fd = fdopen(cd, "r");
-				if (fd == NULL) 
-				{
-					printf("error open client descriptor as file \n");
-				}
-			while ((res = getline(&line, &len, fd)) != -1) 
-			{
-				if (strstr(line, "GET")) 
-				{
-					ParseFileName(line, &filepath, &filepath_len);
-				}
-				if (strcmp(line, "\r\n") == 0) 
-				{
-					empty_str_count++;
-				}
-				else 
-				{
-					empty_str_count = 0;
-				}
-				if (empty_str_count == 1) 
-				{
-					break;
-				}
-				printf("%s", line);
-			}
-			printf("open %s \n", filepath);
-			file = fopen(filepath, "r");
-			if (file == NULL) 
-			{
-				printf("404 File Not Found \n");
-				Headers(cd, 0, 404);
-			}
-			else 
-			{
-				char *fileExt = GetExtension(filepath);
-				char *content_type = 0;
-				int i = 0;
-				while (extensions[i].ext != 0) 
-				{
-					if (strcmp(extensions[i].ext, fileExt) == 0) 
-					{
-						int n = strlen(extensions[i].conttype);
-						content_type = (char*) malloc(n * sizeof(char));
-						strncpy(content_type, extensions[i].conttype, n);
-						break;
-					}
-					i++;
-				}
-				if (content_type != 0) 
-			{
-				fseek(file, 0L, SEEK_END);
-				filesize = ftell(file);
-				fseek(file, 0L, SEEK_SET);
-				Headers(cd, filesize, 200, content_type); 
+		{
+			clients[slot] = accept(my_socket, (struct sockaddr *)&caddr, &size_caddr);
 
-				size_t nbytes = 0;
-
-				while ((nbytes = fread(buf, 1, 1024, file)) > 0) 
+			if (clients[slot]<0)
+				error ("accept error");
+			else
+			{
+				if ( fork()==0 )
 				{
-					res = send(cd, buf, nbytes, 0);
-					if (res == -1) 
-					{
-						printf("send error \n");
-					}
+					printf("client is in %d descriptor. Client's address is %d \n", cd, caddr.sin_addr.s_addr);
+					respond(slot);
+					exit(0);
 				}
-
-				free(content_type);
 			}
-			}		
+
+			while (clients[slot]!=-1) slot = (slot+1)%conMax;
+		}
+		return 0;
 						
-		}	
-	
-	close(cd);
-	return 0;
-}
+						
+		}
 
-void StartServer()
-{
-	int my_socket = 0;
+void StartServer(int my_socket)
+{	
 	int res = 0;
 	struct sockaddr_in saddr;
 	
@@ -210,4 +132,88 @@ void StartServer()
 	{
 		printf("listen error \n");
 	}
+}
+
+void Respond()
+{
+	int filesize = 0;	
+	const int backlog = 10;		
+	char buf[1024];
+	char *line = NULL;
+	size_t len = 0;
+	char *filepath = NULL;
+	size_t filepath_len = 0;
+	int empty_str_count = 0;
+	socklen_t size_saddr;	
+	FILE *fd;
+	FILE *file;	
+				
+	fd = fdopen(cd, "r");
+	if (fd == NULL) 
+	{
+		printf("error open client descriptor as file \n");
+	}
+	while ((res = getline(&line, &len, fd)) != -1) 
+	{
+		if (strstr(line, "GET")) 
+		{
+			ParseFileName(line, &filepath, &filepath_len);
+		}
+		if (strcmp(line, "\r\n") == 0) 
+		{
+			empty_str_count++;
+		}
+		else 
+		{
+			empty_str_count = 0;
+		}
+		if (empty_str_count == 1) 
+		{
+			break;
+		}
+		printf("%s", line);
+	}
+	printf("open %s \n", filepath);
+	file = fopen(filepath, "r");
+	if (file == NULL) 
+	{
+		printf("404 File Not Found \n");
+		Headers(cd, 0, 404);
+	}
+	else 
+	{
+		char *fileExt = GetExtension(filepath);
+		char *content_type = 0;
+		int i = 0;
+		while (extensions[i].ext != 0) 
+		{
+			if (strcmp(extensions[i].ext, fileExt) == 0) 
+			{
+				int n = strlen(extensions[i].conttype);
+				content_type = (char*) malloc(n * sizeof(char));
+				strncpy(content_type, extensions[i].conttype, n);
+				break;
+			}
+			i++;
+		}
+		if (content_type != 0) 
+		{
+			fseek(file, 0L, SEEK_END);
+			filesize = ftell(file);
+			fseek(file, 0L, SEEK_SET);
+			Headers(cd, filesize, 200, content_type); 
+
+			size_t nbytes = 0;
+
+			while ((nbytes = fread(buf, 1, 1024, file)) > 0) 
+			{
+				res = send(cd, buf, nbytes, 0);
+				if (res == -1) 
+				{
+					printf("send error \n");
+				}
+			}
+			free(content_type);
+		}
+	}	
 }
