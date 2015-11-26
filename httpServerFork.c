@@ -23,7 +23,7 @@ struct {
 	{0, 0}	
 };
 
-void headers(int client, int size, int httpcode, char* content_type) {
+void Headers(int client, int size, int httpcode, char* content_type) {
 	char buf[1024];
 	char strsize[20];
 	sprintf(strsize, "%d", size);
@@ -57,7 +57,7 @@ void headers(int client, int size, int httpcode, char* content_type) {
 }
 
 
-void parseFileName(char *line, char **filepath, size_t *len) {
+void ParseFileName(char *line, char **filepath, size_t *len) {
 	char *start = NULL;
 	while ((*line) != '/') line++;
 	start = line + 1;
@@ -69,22 +69,29 @@ void parseFileName(char *line, char **filepath, size_t *len) {
 	printf("%s \n", *filepath);
 }
 
-char* getExtension(char* fileName)
+char* GetExtension(char* fileName)
 {
   return strrchr(fileName,'.');
 }
 
-int main() {
-	int my_socket = 0;
-	int res = 0;
-	int cd = 0;
-	int filesize = 0;
-	int numberOfChildren = 0;
-	pid_t chpid;
-	pid_t *chPids = NULL;
-	const int backlog = 10;
-	struct sockaddr_in saddr;
+int Main() {
+    int conMax = strtonum(argv[1]);
+	int clients[conMax];
+	
 	struct sockaddr_in caddr;
+	socklen_t size_caddr;
+	
+	int i;
+	for(i = 0; i < conMax; i++)
+	clients[i] = -1;
+	
+	StartServer();
+	
+	
+		
+	int filesize = 0;	
+	const int backlog = 10;
+		
 	char buf[1024];
 	char *line = NULL;
 	size_t len = 0;
@@ -92,33 +99,9 @@ int main() {
 	size_t filepath_len = 0;
 	int empty_str_count = 0;
 	socklen_t size_saddr;
-	socklen_t size_caddr;
+	
 	FILE *fd;
 	FILE *file;
-
-	my_socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (my_socket == -1) {
-		printf("listener create error \n");
-	}
-	saddr.sin_family = AF_INET;
-	saddr.sin_port = htons(8080);
-	saddr.sin_addr.s_addr = INADDR_ANY;
-	res = bind(my_socket, (struct sockaddr *)&saddr, sizeof(saddr));
-	if (res == -1) {
-		printf("bind error \n");
-	}
-	res = listen(my_socket, backlog);
-	if (res == -1) {
-		printf("listen error \n");
-	}
-	chpid = fork();
-	if(chpid < 0)
-	{
-		printf("fork error");
-		continue;
-	}
-	if(chpid == 0)
-	{
 		while (1) 
 		{		
 			cd = accept(my_socket, (struct sockaddr *)&caddr, &size_caddr);
@@ -137,7 +120,7 @@ int main() {
 			{
 				if (strstr(line, "GET")) 
 				{
-					parseFileName(line, &filepath, &filepath_len);
+					ParseFileName(line, &filepath, &filepath_len);
 				}
 				if (strcmp(line, "\r\n") == 0) 
 				{
@@ -158,11 +141,11 @@ int main() {
 			if (file == NULL) 
 			{
 				printf("404 File Not Found \n");
-				headers(cd, 0, 404);
+				Headers(cd, 0, 404);
 			}
 			else 
 			{
-				char *fileExt = getExtension(filepath);
+				char *fileExt = GetExtension(filepath);
 				char *content_type = 0;
 				int i = 0;
 				while (extensions[i].ext != 0) 
@@ -181,7 +164,7 @@ int main() {
 				fseek(file, 0L, SEEK_END);
 				filesize = ftell(file);
 				fseek(file, 0L, SEEK_SET);
-				headers(cd, filesize, 200, content_type); 
+				Headers(cd, filesize, 200, content_type); 
 
 				size_t nbytes = 0;
 
@@ -198,31 +181,33 @@ int main() {
 			}
 			}		
 						
-		}
-	}
-	else 
-	{
-		//waitin' till all of the child procs finish
-	   do {
-			stillWaiting = 0;
-			for (int i = 0; i < numberOfChildren; ++i) 
-			{
-			   if (childPids[i] > 0) 
-			   {
-				  if (waitpid(childPids[i], NULL, WNOHANG) != 0)
-					{				 
-					 childPids[i] = 0;
-					}
-				  else 
-				    {				 
-					   stillWaiting = 1;
-				    }
-			   }		  
-			   //sleep(0);
-			}
-		} while (stillWaiting);
-		free(chPids);
-	}
+		}	
+	
 	close(cd);
 	return 0;
+}
+
+void StartServer()
+{
+	int my_socket = 0;
+	int res = 0;
+	struct sockaddr_in saddr;
+	
+	my_socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (my_socket == -1) {
+		printf("listener create error \n");
+	}
+	saddr.sin_family = AF_INET;
+	saddr.sin_port = htons(8080);
+	saddr.sin_addr.s_addr = INADDR_ANY;
+	res = bind(my_socket, (struct sockaddr *)&saddr, sizeof(saddr));
+	if (res == -1) 
+	{
+		printf("bind error \n");
+	}
+	res = listen(my_socket, backlog);
+	if (res == -1) 
+	{
+		printf("listen error \n");
+	}
 }
